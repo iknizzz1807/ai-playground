@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Playground</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+
+      .tab-container {
+        display: flex;
+        margin-bottom: 20px;
+      }
+
+      .tab {
+        padding: 10px 20px;
+        cursor: pointer;
+        background-color: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 5px 5px 0 0;
+        margin-right: 5px;
+      }
+
+      .tab.active {
+        background-color: #4a90e2;
+        color: white;
+        border-bottom: none;
+      }
+
+      .playground {
+        display: none;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 0 5px 5px 5px;
+      }
+
+      .playground.active {
+        display: block;
+      }
+
+      canvas {
+        border: 1px solid black;
+        margin-bottom: 10px;
+        display: block;
+      }
+
+      .button-container {
+        margin: 15px 0;
+      }
+
+      button {
+        margin: 5px;
+        padding: 10px 20px;
+        background-color: #4a90e2;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      button:hover {
+        background-color: #357dcb;
+      }
+
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+
+      .result-container {
+        margin: 15px 0;
+        padding: 15px;
+        background-color: #f0f0f0;
+        border-radius: 5px;
+      }
+
+      .text-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        font-size: 16px;
+      }
+
+      .emoji-result {
+        font-size: 24px;
+        margin-top: 15px;
+      }
+
+      .emoji {
+        font-size: 48px;
+        margin-right: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AI Playground</h1>
+
+    <div class="tab-container">
+      <div class="tab active" id="tab-digits">
+        Handwritten Digit Recognition
+      </div>
+      <div class="tab" id="tab-emoji">Text Emotion & Emoji</div>
+    </div>
+
+    <div class="playground active" id="playground-digits">
+      <h2>Draw a digit (0-9)</h2>
+      <div id="canvas-container"></div>
+      <div class="button-container">
+        <button id="recognize-button">Recognize</button>
+        <button id="clear-button">Clear</button>
+      </div>
+      <div id="digit-result-container" class="result-container">
+        <p>Draw a digit and click "Recognize"</p>
+      </div>
+      <div id="debug-container"></div>
+    </div>
+
+    <div class="playground" id="playground-emoji">
+      <h2>Enter text to analyze emotion</h2>
+      <textarea
+        class="text-input"
+        id="text-input"
+        rows="4"
+        placeholder="Type something like 'I'm so happy today!' or 'This is frustrating...'"
+      ></textarea>
+      <div class="button-container">
+        <button id="emoji-button">Analyze Emotion</button>
+      </div>
+      <div id="emoji-result-container" class="result-container">
+        <p>Enter text and click "Analyze Emotion"</p>
+      </div>
+    </div>
+
+    <script src="index.js"></script>
+  </body>
+</html>

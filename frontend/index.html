@@ -103,6 +103,127 @@
         font-size: 48px;
         margin-right: 10px;
       }
+
+      /* Speech-to-Text styles */
+      .audio-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+
+      .record-button {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #e74c3c;
+        cursor: pointer;
+        margin-right: 20px;
+      }
+
+      .record-button.recording {
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 15px rgba(231, 76, 60, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+        }
+      }
+
+      .record-icon {
+        width: 24px;
+        height: 24px;
+        background-color: white;
+        border-radius: 50%;
+      }
+
+      .record-button.recording .record-icon {
+        width: 20px;
+        height: 20px;
+        border-radius: 2px;
+      }
+
+      .upload-container {
+        display: flex;
+        align-items: center;
+        margin: 20px 0;
+      }
+
+      .file-input-container {
+        position: relative;
+        margin-right: 10px;
+      }
+
+      .file-input-label {
+        padding: 10px 15px;
+        background-color: #4a90e2;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .file-input {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+
+      .file-name {
+        margin-left: 10px;
+        font-size: 14px;
+        color: #555;
+      }
+
+      .transcription {
+        margin-top: 20px;
+        padding: 15px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        white-space: pre-wrap;
+      }
+
+      .timestamp {
+        color: #888;
+        font-size: 12px;
+        margin-right: 5px;
+      }
+
+      .recording-time {
+        font-size: 14px;
+        color: #e74c3c;
+        margin-left: 10px;
+      }
+
+      .tab-indicator {
+        position: relative;
+      }
+
+      .badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background-color: #e74c3c;
+        color: white;
+        border-radius: 10px;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: bold;
+      }
     </style>
   </head>
   <body>
@@ -113,6 +234,12 @@
         Handwritten Digit Recognition
       </div>
       <div class="tab" id="tab-emoji">Text Emotion & Emoji</div>
+      <div class="tab" id="tab-speech">
+        <div class="tab-indicator">
+          Speech to Text
+          <span class="badge">New</span>
+        </div>
+      </div>
     </div>
 
     <div class="playground active" id="playground-digits">
@@ -141,6 +268,43 @@
       </div>
       <div id="emoji-result-container" class="result-container">
         <p>Enter text and click "Analyze Emotion"</p>
+      </div>
+    </div>
+
+    <div class="playground" id="playground-speech">
+      <h2>Convert Speech to Text</h2>
+      <p>Record audio or upload an audio file to transcribe</p>
+
+      <div class="audio-controls">
+        <div class="record-button" id="record-button">
+          <div class="record-icon"></div>
+        </div>
+        <span id="recording-status">Click to start recording</span>
+        <span id="recording-time" class="recording-time"></span>
+      </div>
+
+      <div class="upload-container">
+        <div class="file-input-container">
+          <label class="file-input-label"
+            >Upload Audio
+            <input
+              type="file"
+              id="audio-file"
+              class="file-input"
+              accept="audio/*"
+            />
+          </label>
+        </div>
+        <span class="file-name" id="file-name">No file selected</span>
+      </div>
+
+      <div class="button-container">
+        <button id="transcribe-button" disabled>Transcribe</button>
+        <button id="clear-transcription-button">Clear</button>
+      </div>
+
+      <div id="speech-result-container" class="result-container">
+        <p>Record or upload audio and click "Transcribe"</p>
       </div>
     </div>
 

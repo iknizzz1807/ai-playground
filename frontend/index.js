@@ -208,3 +208,324 @@ emojiButton.addEventListener("click", async () => {
     emojiButton.textContent = "Analyze Emotion";
   }
 });
+
+// ================ SPEECH TO TEXT PLAYGROUND ================
+const recordButton = document.getElementById("record-button");
+const recordingStatus = document.getElementById("recording-status");
+const recordingTime = document.getElementById("recording-time");
+const audioFileInput = document.getElementById("audio-file");
+const fileNameDisplay = document.getElementById("file-name");
+const transcribeButton = document.getElementById("transcribe-button");
+const clearTranscriptionButton = document.getElementById(
+  "clear-transcription-button"
+);
+const speechResultContainer = document.getElementById(
+  "speech-result-container"
+);
+
+// Variables for recording
+let mediaRecorder;
+let audioChunks = [];
+let recordingStartTime;
+let recordingTimer;
+let audioBlob;
+let isRecording = false;
+
+// Check if browser supports MediaRecorder
+const hasRecordingSupport = () => {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+};
+
+// Initialize recording functionality
+if (hasRecordingSupport()) {
+  recordButton.addEventListener("click", toggleRecording);
+} else {
+  recordingStatus.textContent = "Recording not supported in this browser";
+  recordButton.style.backgroundColor = "#ccc";
+  recordButton.style.cursor = "not-allowed";
+}
+
+// Function to toggle recording state
+async function toggleRecording() {
+  if (isRecording) {
+    // Stop recording
+    stopRecording();
+  } else {
+    // Start recording - Reset audio chunks here
+    audioChunks = []; // Reset audio chunks mỗi lần bắt đầu ghi âm mới
+    audioBlob = null; // Reset audio blob
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      startRecording(stream);
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      recordingStatus.textContent =
+        "Error accessing microphone. Please check permissions.";
+    }
+  }
+}
+
+// Start recording function
+function startRecording(stream) {
+  audioChunks = [];
+
+  // Create MediaRecorder instance with specific MIME type for better compatibility
+  const options = { mimeType: "audio/webm" };
+  try {
+    mediaRecorder = new MediaRecorder(stream, options);
+  } catch (e) {
+    console.error("WebM format not supported, trying alternative format", e);
+    mediaRecorder = new MediaRecorder(stream);
+  }
+
+  // Update UI
+  recordButton.classList.add("recording");
+  recordingStatus.textContent = "Recording... Click to stop";
+  isRecording = true;
+
+  // Start timer
+  recordingStartTime = Date.now();
+  updateRecordingTime();
+  recordingTimer = setInterval(updateRecordingTime, 1000);
+
+  // Handle data available event
+  mediaRecorder.ondataavailable = (event) => {
+    audioChunks.push(event.data);
+  };
+
+  // Handle recording stop event
+  mediaRecorder.onstop = () => {
+    // Create audio blob with explicit MIME type
+    const mimeType = mediaRecorder.mimeType || "audio/webm";
+    audioBlob = new Blob(audioChunks, { type: mimeType });
+
+    // Enable transcribe button
+    transcribeButton.disabled = false;
+
+    // Update status
+    recordingStatus.textContent = "Recording saved. Click to record again.";
+
+    // Stop all tracks to release microphone
+    stream.getTracks().forEach((track) => track.stop());
+
+    // Clear file input to prevent confusion
+    audioFileInput.value = "";
+    fileNameDisplay.textContent = "No file selected";
+  };
+
+  // Start recording - collect data every 1 second for more reliable data handling
+  mediaRecorder.start(1000);
+}
+
+// Update recording time display
+function updateRecordingTime() {
+  const elapsedSeconds = Math.floor((Date.now() - recordingStartTime) / 1000);
+  const minutes = Math.floor(elapsedSeconds / 60);
+  const seconds = elapsedSeconds % 60;
+  recordingTime.textContent = `${minutes.toString().padStart(2, "0")}:${seconds
+    .toString()
+    .padStart(2, "0")}`;
+}
+
+// Stop recording function
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
+
+    // Update UI
+    recordButton.classList.remove("recording");
+    isRecording = false;
+
+    // Stop timer
+    clearInterval(recordingTimer);
+  }
+}
+
+// Handle file upload
+audioFileInput.addEventListener("change", (e) => {
+  if (e.target.files.length > 0) {
+    const file = e.target.files[0];
+    fileNameDisplay.textContent = file.name;
+
+    // Disable transcribe button if recording is in progress
+    if (!isRecording) {
+      transcribeButton.disabled = false;
+    }
+
+    // Clear recorded audio
+    audioBlob = null;
+  }
+});
+
+// Transcribe function
+transcribeButton.addEventListener("click", async () => {
+  try {
+    transcribeButton.disabled = true;
+    transcribeButton.textContent = "Processing...";
+
+    let response;
+
+    if (audioBlob) {
+      // Get MIME type of the blob
+      const mimeType = audioBlob.type || "audio/webm";
+      let format = "webm";
+
+      // Extract format from MIME type
+      if (mimeType.includes("webm")) format = "webm";
+      else if (mimeType.includes("mp3") || mimeType.includes("mpeg"))
+        format = "mp3";
+      else if (mimeType.includes("ogg")) format = "ogg";
+      else if (mimeType.includes("wav")) format = "wav";
+
+      // Convert recorded audio to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+
+      // Wait for the FileReader to complete
+      const audioBase64 = await new Promise((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+      });
+
+      // Send recorded audio with correctly detected format
+      response = await fetch("http://localhost:8000/speech/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio: audioBase64, format: format }),
+      });
+    } else {
+      throw new Error("No audio data available");
+    }
+
+    const result = await response.json();
+
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    // Display transcription
+    displayTranscription(result);
+    // Reset audio data after successful transcription to prevent reusing old data
+    if (audioBlob) {
+      // Keep a reference to current audioBlob for playback if needed
+      const lastAudioBlob = audioBlob;
+
+      // Reset for next recording
+      audioBlob = null;
+      audioChunks = [];
+
+      // Optional: Create an audio element to test the transcribed audio
+      /* 
+      const audioURL = URL.createObjectURL(lastAudioBlob);
+      const audioElement = document.createElement("audio");
+      audioElement.controls = true;
+      audioElement.src = audioURL;
+      speechResultContainer.appendChild(audioElement);
+      */
+    }
+  } catch (error) {
+    console.error("Transcription error:", error);
+    speechResultContainer.innerHTML = `
+      <p style="color: red">Error: ${
+        error.message || "Failed to transcribe audio"
+      }</p>
+    `;
+  } finally {
+    transcribeButton.disabled = false;
+    transcribeButton.textContent = "Transcribe";
+  }
+});
+
+// Display transcription results
+function displayTranscription(result) {
+  speechResultContainer.innerHTML = "";
+
+  if (!result.transcription || result.transcription.trim() === "") {
+    speechResultContainer.innerHTML = `
+      <p>No speech detected. Please try again with clearer audio.</p>
+    `;
+    return;
+  }
+
+  const transcriptionContainer = document.createElement("div");
+
+  // Create title
+  const title = document.createElement("h3");
+  title.textContent = "Transcription Result:";
+  transcriptionContainer.appendChild(title);
+
+  // Create transcription area
+  const transcriptionArea = document.createElement("div");
+  transcriptionArea.className = "transcription";
+
+  if (result.timestamps && result.timestamps.length > 0) {
+    // With timestamps
+    result.timestamps.forEach((segment) => {
+      const timestampSpan = document.createElement("span");
+      timestampSpan.className = "timestamp";
+      timestampSpan.textContent = `[${formatTime(segment.start)}-${formatTime(
+        segment.end
+      )}]`;
+
+      const textSpan = document.createElement("span");
+      textSpan.textContent = ` ${segment.text} `;
+
+      transcriptionArea.appendChild(timestampSpan);
+      transcriptionArea.appendChild(textSpan);
+      transcriptionArea.appendChild(document.createElement("br"));
+    });
+  } else {
+    // Without timestamps
+    transcriptionArea.textContent = result.transcription;
+  }
+
+  transcriptionContainer.appendChild(transcriptionArea);
+
+  // Add copy button
+  const copyButton = document.createElement("button");
+  copyButton.textContent = "Copy Text";
+  copyButton.style.marginTop = "10px";
+  copyButton.addEventListener("click", () => {
+    navigator.clipboard
+      .writeText(result.transcription)
+      .then(() => {
+        copyButton.textContent = "Copied!";
+        setTimeout(() => {
+          copyButton.textContent = "Copy Text";
+        }, 2000);
+      })
+      .catch((err) => console.error("Failed to copy: ", err));
+  });
+
+  transcriptionContainer.appendChild(copyButton);
+  speechResultContainer.appendChild(transcriptionContainer);
+}
+
+// Format time from seconds to MM:SS.ms
+function formatTime(seconds) {
+  const min = Math.floor(seconds / 60);
+  const sec = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 100);
+  return `${String(min).padStart(2, "0")}:${String(sec).padStart(
+    2,
+    "0"
+  )}.${String(ms).padStart(2, "0")}`;
+}
+
+// Clear transcription button
+clearTranscriptionButton.addEventListener("click", () => {
+  speechResultContainer.innerHTML = `
+    <p>Record or upload audio and click "Transcribe"</p>
+  `;
+
+  audioFileInput.value = "";
+  fileNameDisplay.textContent = "No file selected";
+  audioBlob = null;
+  transcribeButton.disabled = true;
+});
